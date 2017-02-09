@@ -1,0 +1,13 @@
+{
+    "name": "weblid/massdbimport",
+    "description": "Import CSV files to database in Laravel",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Barry Mason",
+            "email": "barrywebla@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {}
+}
