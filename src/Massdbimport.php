@@ -128,6 +128,14 @@ class MassdbimportRow {
 	 */
 	protected $columns;
 
+    /**
+     * An array of the relations to attach after the save
+     * Typically used for toMany relations
+     *
+     * @access protected
+     */
+    protected $postSaveRelations = [];
+
 	/**
 	 * Returns instance of parent Massdbimport object
 	 *
@@ -147,6 +155,33 @@ class MassdbimportRow {
 	{
 		return $this->model;
 	}
+
+    /**
+     * Returns instance of current model
+     *
+     * @param String $relation 
+     * @param Array $ids
+     *
+     * @access protected
+     */
+    public function getPostSaveRelations()
+    {
+        return $this->postSaveRelations;
+    }
+
+    /**
+     * Returns instance of current model
+     *
+     * @param String $relation 
+     * @param Array $ids
+     *
+     * @access protected
+     */
+    public function pushPostSaveRelation($relation, $ids)
+    {
+        $this->postSaveRelations[$relation] = $ids;
+        return $this->postSaveRelations;
+    }
 
 	/**
 	 * Constructor method sets up dependencies
@@ -178,7 +213,10 @@ class MassdbimportRow {
     		$key = $parsedColumn->getParsedKey();
     		$value =  $parsedColumn->getParsedValue();
 
-    		if($parsedColumn->isRelationalKey()){
+            if($parsedColumn->getRelationType() == "BelongsToMany"){
+                //dd($this->getPostSaveRelations());
+            }
+    		else if($parsedColumn->isRelationalKey()){
     			$this->model->$key()->associate( $value[0] );
     		}
     		else {
@@ -193,7 +231,19 @@ class MassdbimportRow {
 	public function save()
 	{
 		$this->model->save();
+        $this->doPostSaveRelations();
 	}
+
+    private function doPostSaveRelations()
+    {
+        if(empty($this->getPostSaveRelations()))
+            return;
+
+        foreach($this->getPostSaveRelations() as $relation => $ids){
+            $this->getModel()->$relation()->detach();
+            $this->getModel()->$relation()->attach($ids);
+        }
+    }
 }
 
 class MassdbimportColumn {
@@ -203,7 +253,7 @@ class MassdbimportColumn {
 	 *
 	 * @access protected
 	 */
-	protected $row;
+	public $row;
 
 	/**
 	 * The name of the column key before any processing
@@ -232,6 +282,13 @@ class MassdbimportColumn {
 	 * @access protected
 	 */
 	protected $parsedValue;
+
+    /**
+     * If relation column - what kind of column
+     *
+     * @access protected
+     */
+    protected $relationType;
 
 	/**
 	 * Inject our boot variables. 
@@ -279,13 +336,32 @@ class MassdbimportColumn {
 		return $this->parsedKey;
 	}
 
-	/**
+    /**
 	 * Getter method to retrieve parsed value
 	 */
-	public function getParsedValue()
-	{
+    public function getParsedValue()
+    {
 		return $this->parsedValue;
 	}
+
+    /**
+     * Getter method for $this->relationType
+     */
+    public function getRelationType()
+    {
+        return $this->relationType;
+    }
+
+    /**
+     * Setter method for $this->relationType
+     */
+    private function setRelationType($relation)
+    {
+        $relationType = get_class($this->row->getModel()->$relation());
+        $parts = explode("\\", $relationType);
+        $this->relationType = end($parts);
+        return $this->relationType;
+    }
 
 	/**
 	 * Checks the column key for any ":" characters which intruct 
@@ -296,9 +372,9 @@ class MassdbimportColumn {
 	public function isRelationalKey()
 	{
 		if(strpos($this->key, ':') > 1){
-    		return true;
-   		} 
-    	return false;
+			return true;
+		} 
+		return false;
 	}
 
 	/**
@@ -323,7 +399,7 @@ class MassdbimportColumn {
 	 *
 	 * @return Array
 	 */
-	protected function valueAsArray()
+	protected function getValueAsArray()
 	{
 		if(strpos($this->value, '|') > 1){
 			$values = array_filter(explode("|", $this->value));
@@ -358,19 +434,42 @@ class MassdbimportColumn {
     {
     	$parts = $this->keyRelationParts();
 
-		$this->parsedKey = $parts['relation'];
+        $this->parsedKey = $relation = $parts['relation'];
 		
-		$values = $this->valueAsArray();
+        $relationType = $this->setRelationType($relation);
 
-		$relatedObjects = [];
-	
-		foreach($values as $objectLink){
-			$relation = $parts['relation'];
-			$relatedModel = $this->row->getModel()->$relation()->getRelated();
-			$relatedObjects[] = $this->getRelationRecord($relatedModel, $parts['column'], $objectLink);
-		}
+        if($relationType == "BelongsToMany"){
+            $values = $this->getValueAsArray();
+            
+            $relatedObjects = [];
+        
+            foreach($values as $objectLink){
+                $relation = $parts['relation'];
+                $relatedModel = $this->row->getModel()->$relation()->getRelated();
+                $relatedObjects[] = $this->getRelationRecord($relatedModel, $parts['column'], $objectLink);
+            }
 
-		return $relatedObjects;	
+            $relatedIds = array_map(function($o) { return $o->id; }, $relatedObjects);
+
+            $this->row->pushPostSaveRelation($relation, $relatedIds);
+
+            return $relatedIds;
+        }
+        else {
+            $values = $this->getValueAsArray();
+
+            $relatedObjects = [];
+        
+            foreach($values as $objectLink){
+                $relation = $parts['relation'];
+                $relatedModel = $this->row->getModel()->$relation()->getRelated();
+                $relatedObjects[] = $this->getRelationRecord($relatedModel, $parts['column'], $objectLink);
+            }
+
+            return $relatedObjects; 
+        }
+
+		
     }
 
     /*

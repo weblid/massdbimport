@@ -76,7 +76,7 @@ class ImportTest extends TestCase
 				"testLocation:name" => "USA"
 			]
 		])->import();
-		/*
+		
 		// Test many to many
 		
 		Massdbimport::model('\Weblid\Massdbimport\TestPerson')->setRows([
@@ -85,10 +85,12 @@ class ImportTest extends TestCase
 				"testLocations:name" => "USA|UK"
 			]
 		])->import();
-		*/
+		
 		$this->assertDatabaseHas('test_locations', ['name' => 'USA']);
 		$this->assertDatabaseHas('test_locations', ['name' => 'Merseyside', 'test_location_id' => 2]);
 		$this->assertDatabaseHas('test_shops', ['name' => 'Aldi', 'test_location_id' => 1]);
+        $this->assertDatabaseHas('test_location_test_person', ['test_location_id' => 1, 'test_person_id' => 1]);
+        $this->assertDatabaseHas('test_location_test_person', ['test_location_id' => 2, 'test_person_id' => 1]);
 
 	}
 
