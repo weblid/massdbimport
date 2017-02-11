@@ -196,36 +196,28 @@ class MassdbimportColumn {
         
         $relationType = $this->setRelationType($relation);
 
-        if($relationType == "BelongsToMany"){
-            $values = $this->getValueAsArray();
+        $values = $this->getValueAsArray();
             
-            $relatedObjects = [];
-        
-            foreach($values as $objectLink){
-                $relation = $parts['relation'];
-                $relatedModel = $this->row->getModel()->$relation()->getRelated();
-                $relatedObjects[] = $this->getRelationRecord($relatedModel, $parts['column'], $objectLink);
-            }
+        $relatedObjects = [];
 
+        if(empty($values)){
+            return null;
+        }
+    
+        foreach($values as $objectLink){
+            $relation = $parts['relation'];
+            $relatedModel = $this->row->getModel()->$relation()->getRelated();
+            $relatedObjects[] = $this->getRelationRecord($relatedModel, $parts['column'], $objectLink);
+        }
+
+        if($relationType == "BelongsToMany"){
+            
             $relatedIds = array_map(function($o) { return $o->id; }, $relatedObjects);
-
             $this->row->pushPostSaveRelation($relation, $relatedIds);
-
             return $relatedIds;
         }
-        else {
-            $values = $this->getValueAsArray();
-
-            $relatedObjects = [];
         
-            foreach($values as $objectLink){
-                $relation = $parts['relation'];
-                $relatedModel = $this->row->getModel()->$relation()->getRelated();
-                $relatedObjects[] = $this->getRelationRecord($relatedModel, $parts['column'], $objectLink);
-            }
-
-            return $relatedObjects; 
-        }
+        return $relatedObjects; 
         
     }
 

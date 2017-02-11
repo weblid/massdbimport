@@ -19,22 +19,7 @@ class Massdbimport
      *
      * @access protected
      */
-    protected $rows = [
-        [
-            "name"             => "Location",
-            "slug"             => "DEP1",
-            "university:slug"     => "LJMU",
-            "created_by"    => 1,
-            "updated_by"    => 1,
-        ],
-        [
-            "name"             => "Location2",
-            "slug"             => "DEP12",
-            "university:slug"     => "LJMU",
-            "created_by"    => 1,
-            "updated_by"    => 1,
-        ]
-    ];
+    protected $rows = [];
 
     /** 
      * Setter function for $this->rows
