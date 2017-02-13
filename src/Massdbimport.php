@@ -77,6 +77,24 @@ class Massdbimport
      * @param Model $model
      * @access public
      */
+    public function source($source)
+    {
+        if(strpos($source, ".csv") > -1){
+            $csv = new \Weblid\Massdbimport\Importers\Csv($source);
+            $this->rows = $csv->getRows();
+            return $this;
+        }
+        else {
+            dd("No CSV File");
+        }
+    }
+
+    /** 
+     * Start looping through our dataset and preview the import
+     *
+     * @param Model $model
+     * @access public
+     */
     public function import()
     {
         if(empty($this->getRows())){

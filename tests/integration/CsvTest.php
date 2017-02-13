@@ -18,7 +18,7 @@ class CsvTest extends TestCase
 	{
 		$csv = new \Weblid\Massdbimport\Importers\Csv(__DIR__.'/locationsSimple.csv');
 		$rows = $csv->getRows();
-
+		
 		$this->assertContains('locationsSimple.csv', $csv->getSourcePath());
 
 		$this->assertContains('name', $csv->getHeaders());
@@ -28,6 +28,7 @@ class CsvTest extends TestCase
 		$this->assertEquals(3, count($csv->getRows()));
 		
 	}
+	
 
 
 }

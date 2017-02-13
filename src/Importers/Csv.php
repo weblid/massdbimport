@@ -145,8 +145,11 @@ class Csv implements ArrayOutputInterface {
                 }
             }
 
-            if(!$arr_empty)
-                $this->addDataRow($row);
+            if(!$arr_empty){
+                $headerKeys = $this->getHeaders();
+                $rowWithHeaderKeys = array_combine($headerKeys, $row );
+                $this->addDataRow($rowWithHeaderKeys);
+            }
         }
     }
 
