@@ -38,7 +38,7 @@ class MassdbimportRow {
     /**
      * Returns instance of parent Massdbimport object
      *
-     * @access protected
+     * @access public
      */
     public function getParent()
     {
@@ -48,11 +48,21 @@ class MassdbimportRow {
     /**
      * Returns instance of current model
      *
-     * @access protected
+     * @access public
      */
     public function getModel()
     {
         return $this->model;
+    }
+
+    /**
+     * Returns instance of current columns
+     *
+     * @access public
+     */
+    public function getColumns()
+    {
+        return $this->columns;
     }
 
     /**
@@ -61,7 +71,7 @@ class MassdbimportRow {
      * @param String $relation 
      * @param Array $ids
      *
-     * @access protected
+     * @access public
      */
     public function getPostSaveRelations()
     {
@@ -74,7 +84,7 @@ class MassdbimportRow {
      * @param String $relation 
      * @param Array $ids
      *
-     * @access protected
+     * @access public
      */
     public function pushPostSaveRelation($relation, $ids)
     {

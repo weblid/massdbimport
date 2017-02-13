@@ -3,6 +3,7 @@
 namespace Weblid\Massdbimport;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class Massdbimport
 { 

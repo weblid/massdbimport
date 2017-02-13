@@ -102,7 +102,7 @@ class Csv implements ArrayOutputInterface {
     public function __construct($sourceFile)
     {
         if(!file_exists($sourceFile)){
-            return false;
+            dd("NO FILE");
         }
 
         $this->setSourcePath($sourceFile);
@@ -110,7 +110,6 @@ class Csv implements ArrayOutputInterface {
         
         $this->parseHeaders();
         $this->parseContent();
-        
     }
 
     /**

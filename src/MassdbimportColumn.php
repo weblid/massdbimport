@@ -73,6 +73,14 @@ class MassdbimportColumn {
     /**
      * Getter method to retrieve original value
      */
+    public function getModel()
+    {
+        return $this->row->getModel();
+    }
+
+    /**
+     * Getter method to retrieve original value
+     */
     public function getValue()
     {
         return $this->value;
@@ -178,8 +186,37 @@ class MassdbimportColumn {
             $this->parsedValue = $this->getRelatedObjectsFromKey();
         } 
         else {
-            $this->parsedValue = $this->value;
+            $this->parsedValue = $this->parseFlatValue($this->value);
         } 
+    }
+
+    protected function isParseFunction($value)
+    {
+        if(strpos($value, "(") > 0 && strpos($value, ")") == strlen($value)-1){
+
+            $start = strpos($value, "(");
+            $func = substr($value, 0,$start);
+            preg_match("#\((.*?)\)#", $value, $matches);
+            $value = $matches[1];
+            
+            return [$func, $value];
+        }
+
+        return false;
+    }
+
+    protected function parseFlatValue($value)
+    {
+        if($parseParts = $this->isParseFunction($value)){
+            if($parseParts[0] == "slugify"){
+                $column = $parseParts[1];
+                $model = $this->row->getColumns();
+
+                $value = strtoupper(str_slug($model[$column], '_'));
+            }
+        }
+
+        return $value;
     }
 
     /** 
