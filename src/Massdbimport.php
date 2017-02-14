@@ -10,17 +10,46 @@ class Massdbimport
     /** 
      * Reference to the Eloquent model to map individual rows to.
      *
+     * @var String
      * @access protected
      */
     protected $model;
 
     /** 
+     * Columns used as indices to check for duplicates
+     *
+     * @var Array
+     * @access protected
+     */
+    protected $uniqueColumns = [];
+
+    /** 
      * Holds the dataset which is an array of all of the rows to 
      * import
      *
+     * @var Array
      * @access protected
      */
     protected $rows = [];
+
+
+    /** 
+     * Holds the dataset which has been processed
+     *
+     * @var Array
+     * @access protected
+     */
+    protected $processedRows = [];
+
+    /** 
+     * Options
+     *
+     * @var Array
+     * @access protected
+     */
+    protected $options = [
+        "ifDuplicate" => "QUIT" // UPDATE, SKIP, RENAME or QUIT
+    ];
 
     /** 
      * Setter function for $this->rows
@@ -34,6 +63,38 @@ class Massdbimport
     }
 
     /** 
+     * Get an array of the updated objects
+     *
+     * @param Array $rows
+     * @access public
+     */
+    public function getProcessedRows()
+    {
+        return $this->processedRows;
+    }
+
+    /** 
+     * Get the unqiue columns array
+     *
+     * @access public
+     */
+    public function getUniqueColumns()
+    {
+        return $this->uniqueColumns;
+    }
+
+     /** 
+     * Add an array of the updated objects
+     *
+     * @param Array $rows
+     * @access public
+     */
+    public function addProcessedRow($row)
+    {
+        $this->processedRows[] = $row;;
+    }
+
+    /** 
      * Setter function for $this->rows
      *
      * @param Array $rows
@@ -43,6 +104,17 @@ class Massdbimport
     {
         $this->rows = $rows;
         return $this;
+    }
+
+    /** 
+     * Getter function to get a option value
+     *
+     * @param String $option
+     * @access public
+     */
+    public function getOption($option)
+    {
+        return strtoupper($this->options[$option]);
     }
 
     /** 
@@ -73,6 +145,18 @@ class Massdbimport
     }
 
     /** 
+     * Facade interface for the 'ifDuplicate' option.
+     *
+     * @param String $action
+     * @access public
+     */
+    public function ifDuplicate($action)
+    {
+        $this->options['ifDuplicate'] = $action;
+        return $this;
+    }
+
+    /** 
      * Start looping through our dataset and preview the import
      *
      * @param Model $model
@@ -91,6 +175,18 @@ class Massdbimport
     }
 
     /** 
+     * Add a column unique index
+     *
+     * @param Array $rows
+     * @access public
+     */
+    public function unique($column)
+    {
+        $this->uniqueColumns[] = $column;
+        return $this;
+    }
+
+    /** 
      * Start looping through our dataset and preview the import
      *
      * @param Model $model
@@ -104,8 +200,12 @@ class Massdbimport
 
         foreach($this->getRows() as $row){
             $row = new MassdbimportRow($this, $row);
-            $row->save();
+            if($row->save()){
+                $this->addProcessedRow($row);
+            }
         }
+
+        return $this;
     }
 }
 

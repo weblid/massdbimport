@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class MassdbimportRow {
 
+    protected $skipSave = false;
+
     /**
      * A new row specific instance of the Eloquent model
      *
@@ -34,6 +36,24 @@ class MassdbimportRow {
      * @access protected
      */
     protected $postSaveRelations = [];
+
+    /**
+     * Constructor method sets up dependencies
+     *
+     * @param Massdbimport $parent
+     * @param Array $columns
+     *
+     * @access protected
+     */
+    public function __construct(Massdbimport $parent, $columns)
+    {
+        $this->columns = $columns;
+        $this->parent = $parent;
+        $modelTemplate = $parent->getModel();
+        $this->model = new $modelTemplate;
+
+        $this->parseRow();
+    }
 
     /**
      * Returns instance of parent Massdbimport object
@@ -93,21 +113,36 @@ class MassdbimportRow {
     }
 
     /**
-     * Constructor method sets up dependencies
+     * Checks if a key is a designated unique column
      *
-     * @param Massdbimport $parent
-     * @param Array $columns
+     * @param String $key 
      *
-     * @access protected
+     * @access public
      */
-    public function __construct(Massdbimport $parent, $columns)
+    public function isUniqueKey($key)
     {
-        $this->columns = $columns;
-        $this->parent = $parent;
-        $modelTemplate = $parent->getModel();
-        $this->model = new $modelTemplate;
+        if(in_array($key, $this->parent->getUniqueColumns())){
+            return true;
+        }
+        return false;
+    }
 
-        $this->parseRow();
+    /**
+     * Checks if there is already a record in this model with the
+     * given key and value
+     *
+     * @param String $key
+     * @param String $value
+     *
+     * @return Bool
+    */
+    public function isDuplicate($key, $value)
+    {
+        $model = $this->getParent()->getModel();
+        $model = new $model;
+        $count = $model->where($key, $value)->count();
+
+        return $count > 0 ? true : false;
     }
 
     /**
@@ -118,9 +153,29 @@ class MassdbimportRow {
         foreach($this->columns as $key => $value)
         {
             $parsedColumn = new MassdbimportColumn($this, $key, $value);
-
             $key = $parsedColumn->getParsedKey();
             $value =  $parsedColumn->getParsedValue();
+            $skip = false;
+            if($this->isUniqueKey($key) && $this->isDuplicate($key, $value)){
+                switch($this->getParent()->getOption('ifDuplicate'))
+                {
+                    case "UPDATE":
+                        $oldRow = $this->model->where($key, $value)->first();
+                        $modelTemplate = $this->parent->getModel();
+                        $this->model = $modelTemplate::find($oldRow->id);
+                    break;
+                    case "SKIP":
+                        $this->skipSave = true;
+                    break;
+                    case "RENAME":
+                        $this->model->$key = $key . '_' . time(); 
+                        $skip = true;
+                    break;
+                }
+            }
+
+            if($skip)
+                continue;
 
             if($parsedColumn->getRelationType() == "BelongsToMany"){
                 //dd($this->getPostSaveRelations());
@@ -139,8 +194,15 @@ class MassdbimportRow {
      */
     public function save()
     {
-        $this->model->save();
-        $this->doPostSaveRelations();
+        if($this->skipSave){
+            return true;
+        }
+
+        if($this->model->save()){
+            $this->doPostSaveRelations();
+            return true;
+        }
+        return false;
     }
 
     /**

@@ -67,6 +67,76 @@ class ImportOptionsTest extends TestCase
 
 	}
 
+    public function testDuplicateOptionsUpdate(){
+
+        // Check that the UPDATE option works on duplicates
+        Massdbimport::model('\Weblid\Massdbimport\TestLocation')
+        ->setRows([
+            [
+                "slug"          => "USA",
+                "name"          => "USA",
+            ],
+            [
+                "slug"          => "USA",
+                "name"          => "Update"
+            ]
+        ])
+        ->unique('slug')
+        ->ifDuplicate("UPDATE")
+        ->import();
+
+        $this->assertDatabaseHas('test_locations', ['name' => 'Update', 'slug' => 'USA']);
+        $this->assertDatabaseMissing('test_locations', ['name' => 'USA', 'slug' => 'USA']);
+
+    }
+
+    public function testDuplicateOptionsSkip(){
+
+        // Check that the UPDATE option works on duplicates
+        Massdbimport::model('\Weblid\Massdbimport\TestLocation')
+        ->setRows([
+            [
+                "slug"          => "USA",
+                "name"          => "USA",
+            ],
+            [
+                "slug"          => "USA",
+                "name"          => "Update"
+            ]
+        ])
+        ->unique('slug')
+        ->ifDuplicate("SKIP")
+        ->import();
+
+        $this->assertDatabaseHas('test_locations', ['name' => 'USA', 'slug' => 'USA']);
+        $this->assertDatabaseMissing('test_locations', ['name' => 'Update', 'slug' => 'USA']);
+
+    }
+
+
+    public function testDuplicateOptionsRename(){
+
+        // Check that the UPDATE option works on duplicates
+        Massdbimport::model('\Weblid\Massdbimport\TestLocation')
+        ->setRows([
+            [
+                "slug"          => "USA",
+                "name"          => "USA",
+            ],
+            [
+                "slug"          => "USA",
+                "name"          => "USA2"
+            ]
+        ])
+        ->unique('slug')
+        ->ifDuplicate("RENAME")
+        ->import();
+
+        $this->assertDatabaseHas('test_locations', ['name' => 'USA', 'slug' => 'USA']);
+        $this->assertDatabaseHas('test_locations', ['name' => 'USA2']);
+
+    }
+
 
     public function tearDown(){
 		Schema::dropIfExists('test_locations');
