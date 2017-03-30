@@ -20,7 +20,7 @@ You can define relations in the CSV header with the 'relation:column' syntax. It
 
 You can define ManyToMany relationships by seperating your values with '|'.
 
-##Handling duplicates
+## Handling duplicates
 
 You can define unique id columns (such as a slug) with the ->unique() interface like so:
 
@@ -38,17 +38,17 @@ UPDATE
 SKIP
 RENAME
 
-##Helper functions
+## Helper functions
 
 Some functions have been made available that can be used in cells in the CSV file to manipulate or create custom cell data.
 
-###Slugify####
+### Slugify 
 ```php
 slugify(column_name)
 ```
 This will create a slug (no spaces, upper case) string from the given column name.
 
 
-##Current Status
+## Current Status
 
 Very early development.
