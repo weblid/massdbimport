@@ -4,6 +4,7 @@ namespace Weblid\Massdbimport;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use Weblid\Massdbimport\Loggers\SessionLogger;
 
 class Massdbimport
 { 
@@ -32,7 +33,6 @@ class Massdbimport
      */
     protected $rows = [];
 
-
     /** 
      * Holds the dataset which has been processed
      *
@@ -40,6 +40,14 @@ class Massdbimport
      * @access protected
      */
     protected $processedRows = [];
+
+    /** 
+     * Holds reference to the log object
+     *
+     * @var Array
+     * @access protected
+     */
+    protected $logger;
 
     /** 
      * Options
@@ -50,6 +58,16 @@ class Massdbimport
     protected $options = [
         "ifDuplicate" => "QUIT" // UPDATE, SKIP, RENAME or QUIT
     ];
+
+    public function __construct()
+    {
+        $this->logger = new SessionLogger();
+    }
+
+    public function getLogger()
+    {
+        return $this->logger;
+    }
 
     /** 
      * Setter function for $this->rows
@@ -157,7 +175,20 @@ class Massdbimport
     }
 
     /** 
-     * Start looping through our dataset and preview the import
+     * Facade interface Add a column unique index
+     *
+     * @param Array $rows
+     * @access public
+     */
+    public function unique($column)
+    {
+        $this->uniqueColumns[] = $column;
+        return $this;
+    }
+
+    /** 
+     * Facade interface Start looping through our dataset 
+     * and preview the import
      *
      * @param Model $model
      * @access public
@@ -175,21 +206,8 @@ class Massdbimport
     }
 
     /** 
-     * Add a column unique index
-     *
-     * @param Array $rows
-     * @access public
-     */
-    public function unique($column)
-    {
-        $this->uniqueColumns[] = $column;
-        return $this;
-    }
-
-    /** 
      * Start looping through our dataset and preview the import
      *
-     * @param Model $model
      * @access public
      */
     public function import()
@@ -206,6 +224,16 @@ class Massdbimport
         }
 
         return $this;
+    }
+
+    /** 
+     * Facade interface for log object
+     *
+     * @access public
+     */
+    public function logger()
+    {
+        return $this->logger;
     }
 }
 

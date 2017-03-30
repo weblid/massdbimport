@@ -38,6 +38,17 @@ UPDATE
 SKIP
 RENAME
 
+##Helper functions
+
+Some functions have been made available that can be used in cells in the CSV file to manipulate or create custom cell data.
+
+###Slugify####
+```php
+slugify(column_name)
+```
+This will create a slug (no spaces, upper case) string from the given column name.
+
+
 ##Current Status
 
 Very early development.

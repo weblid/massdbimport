@@ -92,7 +92,7 @@ class ImportOptionsTest extends TestCase
 
     public function testDuplicateOptionsSkip(){
 
-        // Check that the UPDATE option works on duplicates
+        // Check that the SKIP option works on duplicates
         Massdbimport::model('\Weblid\Massdbimport\TestLocation')
         ->setRows([
             [

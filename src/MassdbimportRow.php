@@ -11,13 +11,23 @@ class MassdbimportRow {
     /**
      * A new row specific instance of the Eloquent model
      *
+     * @var Model
      * @access protected
      */
     protected $model;
 
     /**
+     * A new row specific instance of the Eloquent model
+     *
+     * @var Model
+     * @access protected
+     */
+    protected $prevModel = null;
+
+    /**
      * A reference back to the parent object
      *
+     * @var Massdbimport
      * @access protected
      */
     protected $parent;
@@ -25,6 +35,7 @@ class MassdbimportRow {
     /**
      * An array of columns in "key/val" format
      *
+     * @var Array
      * @access protected
      */
     protected $columns;
@@ -33,6 +44,7 @@ class MassdbimportRow {
      * An array of the relations to attach after the save
      * Typically used for toMany relations
      *
+     * @var Array
      * @access protected
      */
     protected $postSaveRelations = [];
@@ -51,14 +63,17 @@ class MassdbimportRow {
         $this->parent = $parent;
         $modelTemplate = $parent->getModel();
         $this->model = new $modelTemplate;
-
         $this->parseRow();
     }
 
+    public function log()
+    {
+        return $this->getParent()->getLogger();
+    }
     /**
      * Returns instance of parent Massdbimport object
      *
-     * @access public
+     * @return Massdbimport
      */
     public function getParent()
     {
@@ -68,7 +83,7 @@ class MassdbimportRow {
     /**
      * Returns instance of current model
      *
-     * @access public
+     * @return Model
      */
     public function getModel()
     {
@@ -76,9 +91,19 @@ class MassdbimportRow {
     }
 
     /**
+     * Returns instance of previous (row in db) model
+     *
+     * @return Model
+     */
+    public function getPrevModel()
+    {
+        return $this->prevModel;
+    }
+
+    /**
      * Returns instance of current columns
      *
-     * @access public
+     * @return Array
      */
     public function getColumns()
     {
@@ -86,12 +111,10 @@ class MassdbimportRow {
     }
 
     /**
-     * Returns instance of current model
+     * Gets a list of the relations to save after 
+     * the row's saved
      *
-     * @param String $relation 
-     * @param Array $ids
-     *
-     * @access public
+     * @return Array
      */
     public function getPostSaveRelations()
     {
@@ -99,7 +122,18 @@ class MassdbimportRow {
     }
 
     /**
-     * Returns instance of current model
+     * Sets a flag to tell the row not to save to db
+     *
+     * @return Array
+     */
+    public function skipSave()
+    {
+        return $this->skipSave = true;;
+    }
+
+    /**
+     * Adds a relation to the stack of relations to attach
+     * after the row is saved
      *
      * @param String $relation 
      * @param Array $ids
@@ -117,7 +151,7 @@ class MassdbimportRow {
      *
      * @param String $key 
      *
-     * @access public
+     * @return Bool
      */
     public function isUniqueKey($key)
     {
@@ -155,37 +189,95 @@ class MassdbimportRow {
             $parsedColumn = new MassdbimportColumn($this, $key, $value);
             $key = $parsedColumn->getParsedKey();
             $value =  $parsedColumn->getParsedValue();
-            $skip = false;
+
             if($this->isUniqueKey($key) && $this->isDuplicate($key, $value)){
+                
+                $this->prevModel = $this->getModelRow($key, $value);
+
                 switch($this->getParent()->getOption('ifDuplicate'))
                 {
                     case "UPDATE":
-                        $oldRow = $this->model->where($key, $value)->first();
-                        $modelTemplate = $this->parent->getModel();
-                        $this->model = $modelTemplate::find($oldRow->id);
+                        $this->setCurrentRowAsDifferentRecord($key, $value);
                     break;
                     case "SKIP":
-                        $this->skipSave = true;
+                        $this->skipSave();
                     break;
                     case "RENAME":
-                        $this->model->$key = $key . '_' . time(); 
-                        $skip = true;
+                        $this->renameUniqueCell($key);
+                        continue 2;
                     break;
                 }
             }
 
-            if($skip)
-                continue;
+            $this->handleModelAssign($parsedColumn);
+        }
+    }
 
-            if($parsedColumn->getRelationType() == "BelongsToMany"){
-                //dd($this->getPostSaveRelations());
-            }
-            else if($parsedColumn->isRelationalKey()){
-                $this->model->$key()->associate( $value[0] );
-            }
-            else {
-                $this->model->$key = $value;
-            }
+    /**
+     * Takes the value of a cell and appends a timestamp to it to avoid 
+     * duplicates
+     *
+     * @param String $key - (model atrribute)
+     *
+     * @return null
+     */
+    private function renameUniqueCell($key)
+    {
+        $this->model->$key = $key . '_' . time(); 
+    }
+
+    /**
+     * Loads a database row into the model from given column key and 
+     * value - used for update function
+     *
+     * @param String $key 
+     * @param String $value 
+     *
+     * @return null
+     */
+    private function setCurrentRowAsDifferentRecord($key, $value)
+    {
+        $this->model = $this->getModelRow($key, $value);
+    }
+
+    /**
+     * Get's row from db from key and value
+     *
+     * @param String $key 
+     * @param String $value 
+     *
+     * @return null
+     */
+    private function getModelRow($key, $value)
+    {
+        $oldRow = $this->model->where($key, $value)->first();
+        $modelTemplate = $this->parent->getModel();
+        return $modelTemplate::find($oldRow->id);
+    }
+
+    /**
+     * Assigns the parsed Column cell to the model attribute 
+     *
+     * @param MassdbimportColumn $cell 
+     * 
+     * @return null
+     */
+    private function handleModelAssign(MassdbimportColumn $cell)
+    {
+        $key = $cell->getParsedKey();
+        $value =  $cell->getParsedValue();
+
+        if($cell->getRelationType() == "BelongsToMany")
+        {
+            $this->pushPostSaveRelation($key, $value);
+        }
+        else if($cell->isRelationalKey())
+        {
+            $this->model->$key()->associate( $value[0] );
+        }
+        else 
+        {
+            $this->model->$key = $value;
         }
     }
 
@@ -195,11 +287,15 @@ class MassdbimportRow {
     public function save()
     {
         if($this->skipSave){
+            $this->log()->skipRecord($this->model, $this->prevModel);
             return true;
         }
 
+        $this->model->id ? $action = "UPDATE" : $action = "NEW";
+
         if($this->model->save()){
             $this->doPostSaveRelations();
+            $this->log()->newRecord($this->model, $action, $this->getPrevModel());
             return true;
         }
         return false;

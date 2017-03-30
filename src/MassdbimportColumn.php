@@ -49,28 +49,6 @@ class MassdbimportColumn {
     protected $relationType;
 
     /**
-     * Inject our boot variables. 
-     *
-     * @param MassdbimportRow $row
-     * @param String $key
-     * @param String $value
-     *
-     * @access protected
-     */
-    public function __construct(MassdbimportRow $row, $key, $value)
-    {
-        $this->key = $key;
-        $this->value = $value;
-
-        $this->parsedKey = $key;
-        $this->parsedValue = $value;
-
-        $this->row = $row;
-
-        $this->parse();
-    }
-
-    /**
      * Getter method to retrieve original value
      */
     public function getModel()
@@ -119,7 +97,85 @@ class MassdbimportColumn {
     }
 
     /**
-     * Setter method for $this->relationType
+     * Inject our boot variables. 
+     *
+     * @param MassdbimportRow $row
+     * @param String $key
+     * @param String $value
+     *
+     * @access protected
+     */
+    public function __construct(MassdbimportRow $row, $key, $value)
+    {
+        $this->key = $key;
+        $this->value = $value;
+
+        $this->parsedKey = $key;
+        $this->parsedValue = $value;
+
+        $this->row = $row;
+
+        $this->parse();
+    }
+
+    /** 
+     * Check if the value is in a 'relation' column. If it is then we
+     * search for the referenced object(s). If it's a normal column, 
+     * just return the value. 
+     */
+    protected function parse()
+    {
+        if($this->isRelationalKey()){
+            $this->parsedValue = $this->getRelatedObjectsFromKey();
+        } 
+        else {
+            $this->parsedValue = $this->parseFlatValue($this->value);
+        } 
+    }
+
+    /** 
+     * Disect the key column and analise the relation: and the :column name
+     * then get the associated models and put them in an array
+     *
+     * @return Array 
+     */
+    protected function getRelatedObjectsFromKey()
+    {
+        $parts = $this->keyRelationParts();
+
+        $this->parsedKey = $relation = $parts['relation'];
+        
+        $relationType = $this->setRelationType($relation);
+
+        $values = $this->getValueAsArray();
+            
+        $relatedObjects = [];
+
+        if(empty($values)){
+            return null;
+        }
+    
+        foreach($values as $objectLink){
+            $relation = $parts['relation'];
+            $relatedModel = $this->row->getModel()->$relation()->getRelated();
+            $relatedObjects[] = $this->getRelationRecord($relatedModel, $parts['column'], $objectLink);
+        }
+
+        if($relationType == "BelongsToMany"){
+            $relatedIds = array_map(function($o) { return $o->id; }, $relatedObjects);
+            return $relatedIds;
+        }
+        
+        return $relatedObjects; 
+        
+    }
+
+    /**
+     * Gets relation type from a key
+     *
+     * @param String $relation
+     * 
+     * @return String 
      */
     private function setRelationType($relation)
     {
@@ -176,21 +232,14 @@ class MassdbimportColumn {
     }
 
     /** 
-     * Check if the value is in a 'relation' column. If it is then we
-     * search for the referenced object(s). If it's a normal column, 
-     * just return the value. 
+     * Looks at a value for () to indicate a function. If
+     * found returns an array of function and value
+     *
+     * @param String $value
+     *
+     * @return Array
      */
-    protected function parse()
-    {
-        if($this->isRelationalKey()){
-            $this->parsedValue = $this->getRelatedObjectsFromKey();
-        } 
-        else {
-            $this->parsedValue = $this->parseFlatValue($this->value);
-        } 
-    }
-
-    protected function isParseFunction($value)
+    protected function getParseFunction($value)
     {
         if(strpos($value, "(") > 0 && strpos($value, ")") == strlen($value)-1){
 
@@ -205,57 +254,24 @@ class MassdbimportColumn {
         return false;
     }
 
+    /**
+     * Checks a cell value for functions and executes
+     * function on value to return the new value
+     *
+     * @param String $value
+     *
+     * @return $value
+     */
     protected function parseFlatValue($value)
     {
-        if($parseParts = $this->isParseFunction($value)){
+        if($parseParts = $this->getParseFunction($value)){
             if($parseParts[0] == "slugify"){
                 $column = $parseParts[1];
                 $model = $this->row->getColumns();
-
                 $value = strtoupper(str_slug($model[$column], '_'));
             }
         }
-
         return $value;
-    }
-
-    /** 
-     * Disect the key column and analise the relation: and the :column name
-     * then get the associated models and put them in an array
-     *
-     * @return Array 
-     */
-    protected function getRelatedObjectsFromKey()
-    {
-        $parts = $this->keyRelationParts();
-
-        $this->parsedKey = $relation = $parts['relation'];
-        
-        $relationType = $this->setRelationType($relation);
-
-        $values = $this->getValueAsArray();
-            
-        $relatedObjects = [];
-
-        if(empty($values)){
-            return null;
-        }
-    
-        foreach($values as $objectLink){
-            $relation = $parts['relation'];
-            $relatedModel = $this->row->getModel()->$relation()->getRelated();
-            $relatedObjects[] = $this->getRelationRecord($relatedModel, $parts['column'], $objectLink);
-        }
-
-        if($relationType == "BelongsToMany"){
-            
-            $relatedIds = array_map(function($o) { return $o->id; }, $relatedObjects);
-            $this->row->pushPostSaveRelation($relation, $relatedIds);
-            return $relatedIds;
-        }
-        
-        return $relatedObjects; 
-        
     }
 
     /**
