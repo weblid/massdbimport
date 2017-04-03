@@ -218,6 +218,7 @@ class Massdbimport
 
         foreach($this->getRows() as $row){
             $row = new MassdbimportRow($this, $row);
+            
             if($row->save()){
                 $this->addProcessedRow($row);
             }

@@ -271,6 +271,11 @@ class MassdbimportColumn {
                 $value = strtoupper(str_slug($model[$column], '_'));
             }
         }
+
+        if($value == ""){
+            $value = null;
+        }
+        
         return $value;
     }
 
