@@ -296,9 +296,14 @@ class Massdbimport
             else {
                 $relation = $instruct['instructions']['relation'];
                 $relatedModel = $instruct['row']->$relation()->getRelated();
+            
+                $obj = $this->getRelationRecord($relatedModel, $instruct['instructions']['column'], $instruct['instructions']['data'][0]);
+                
+                if($obj){
 
-                $obj = $this->getRelationRecord($relatedModel, $instruct['instructions']['column'], $relationId);
-                $instruct['row']->$relation()->associate($obj->id);
+                    $instruct['row']->$relation()->associate($obj);
+                    $instruct['row']->save();
+                }
             }
         }
     }

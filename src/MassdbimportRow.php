@@ -153,28 +153,32 @@ class MassdbimportRow {
         {
             $parsedColumn = new MassdbimportColumn($this, $key, $value);
             $key = $parsedColumn->getParsedKey();
-            $value =  $parsedColumn->getParsedValue();
+            $parsedValue =  $parsedColumn->getParsedValue();
 
-            if($this->isUniqueKey($key) && $this->isDuplicate($key, $value)){
+            if($this->isUniqueKey($key) && $this->isDuplicate($key, $parsedValue)){
                 
-                $this->prevModel = $this->getModelRow($key, $value);
+                $this->prevModel = $this->getModelRow($key, $parsedValue);
 
                 switch($this->getParent()->getOption('ifDuplicate'))
                 {
                     case "UPDATE":
-                        $this->setCurrentRowAsDifferentRecord($key, $value);
+                        $this->setCurrentRowAsDifferentRecord($key, $parsedValue);
                     break;
                     case "SKIP":
                         $this->skipSave();
                     break;
                     case "RENAME":
-                        $this->renameUniqueCell($key);
+                        $this->renameUniqueCell($key, $value);
                         continue 2;
+                    break;
+                    default:
+                        dd("There was a clash: $key $value");
                     break;
                 }
             }
 
-            $this->handleModelAssign($parsedColumn);
+            if(!$this->skipSave)
+                $this->handleModelAssign($parsedColumn);
         }
     }
 
@@ -186,9 +190,9 @@ class MassdbimportRow {
      *
      * @return null
      */
-    private function renameUniqueCell($key)
+    private function renameUniqueCell($key, $value)
     {
-        $this->model->$key = $key . '_' . time(); 
+        $this->model->$key = strtoupper($value) . '_' . time(); 
     }
 
     /**
@@ -232,12 +236,6 @@ class MassdbimportRow {
         $key = $cell->getParsedKey();
         $value =  $cell->getParsedValue();
 
-        /*
-        if($cell->getRelationType() == "BelongsToMany")
-        {
-            $this->parent->pushPostSaveRelation($this->model, $key, $value);
-        }
-        */
         if($cell->isRelationalKey())
         {
             $this->parent->pushPostSaveRelation($this->model, $value);
