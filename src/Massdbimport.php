@@ -41,6 +41,14 @@ class Massdbimport
      */
     protected $processedRows = [];
 
+    /**
+     * An array of the relations to attach after the save
+     *
+     * @var Array
+     * @access protected
+     */
+    protected $postSaveRelations = [];
+
     /** 
      * Holds reference to the log object
      *
@@ -135,6 +143,36 @@ class Massdbimport
         return strtoupper($this->options[$option]);
     }
 
+    /**
+     * Gets a list of the relations to save after 
+     * all the items saved
+     *
+     * @return Array
+     */
+    public function getPostSaveRelations()
+    {
+        return $this->postSaveRelations;
+    }
+
+    /**
+     * Adds a relation to the stack of relations to attach
+     * after the rows are saved
+     *
+     * @param String $relation 
+     * @param Array $ids
+     *
+     * @access public
+     */
+    public function pushPostSaveRelation($row, $instructions)
+    {
+        $this->postSaveRelations[] = [
+            "row" => $row,
+            "instructions" => $instructions
+        ];
+
+        return $this->postSaveRelations;
+    }
+
     /** 
      * Setter function for $this->rows
      *
@@ -224,7 +262,57 @@ class Massdbimport
             }
         }
 
+        $this->doPostSaveRelations();
+
         return $this;
+    }
+
+    /**
+     * Analyze the postSaveRelations proerpty and attach all
+     * the reltions according tot he array instructions
+     */
+    private function doPostSaveRelations()
+    {
+        if(empty($this->getPostSaveRelations()))
+            return;
+
+        foreach($this->getPostSaveRelations() as $instruct){
+
+            if(empty($instruct['instructions']))
+                continue;
+
+            if($instruct['instructions']['relation_type'] == "BelongsToMany"){
+                $idsToAttach = [];
+                foreach($instruct['instructions']['data'] as $relationId){
+
+                    $relation = $instruct['instructions']['relation'];
+                    $relatedModel = $instruct['row']->$relation()->getRelated();
+
+                    $obj = $this->getRelationRecord($relatedModel, $instruct['instructions']['column'], $relationId);
+                    $idsToAttach[] = $obj->id;
+                }
+                $instruct['row']->$relation()->attach($idsToAttach);
+            }
+            else {
+                $relation = $instruct['instructions']['relation'];
+                $relatedModel = $instruct['row']->$relation()->getRelated();
+
+                $obj = $this->getRelationRecord($relatedModel, $instruct['instructions']['column'], $relationId);
+                $instruct['row']->$relation()->associate($obj->id);
+            }
+        }
+    }
+
+    /**
+     * Get the related record from a given column and value to search for
+     *
+     * @param Model $model Instance to search for related record 
+     * @param String $column 
+     * @param Mixed $value to look for
+     */
+    protected function getRelationRecord(Model $relation, $column, $value)
+    {
+        return $relation->where($column, $value)->first();
     }
 
     /** 

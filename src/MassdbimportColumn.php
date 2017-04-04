@@ -126,12 +126,38 @@ class MassdbimportColumn {
     protected function parse()
     {
         if($this->isRelationalKey()){
-            $this->parsedValue = $this->getRelatedObjectsFromKey();
+            $this->parsedValue = $this->makeRelationInstruction();
         } 
         else {
             $this->parsedValue = $this->parseFlatValue($this->value);
         } 
     }
+    
+    /**
+     * Checks a cell value for functions and executes
+     * function on value to return the new value
+     *
+     * @param String $value
+     *
+     * @return $value
+     */
+    protected function parseFlatValue($value)
+    {
+        if($parseParts = $this->getParseFunction($value)){
+            if($parseParts[0] == "slugify"){
+                $column = $parseParts[1];
+                $model = $this->row->getColumns();
+                $value = strtoupper(str_slug($model[$column], '_'));
+            }
+        }
+
+        if($value == ""){
+            $value = null;
+        }
+        
+        return $value;
+    }
+
 
     /** 
      * Disect the key column and analise the relation: and the :column name
@@ -139,7 +165,7 @@ class MassdbimportColumn {
      *
      * @return Array 
      */
-    protected function getRelatedObjectsFromKey()
+    protected function makeRelationInstruction()
     {
         $parts = $this->keyRelationParts();
 
@@ -147,14 +173,19 @@ class MassdbimportColumn {
         
         $relationType = $this->setRelationType($relation);
 
-        $values = $this->getValueAsArray();
-            
+        $values = array_filter($this->getValueAsArray());
+   
         $relatedObjects = [];
 
-        if(empty($values)){
+        if(empty($values) || !$values){
             return null;
         }
-    
+        
+        $parts['relation_type'] = $relationType;
+        $parts['data'] = $values;
+   
+        return $parts;
+        /*
         foreach($values as $objectLink){
             $relation = $parts['relation'];
             $relatedModel = $this->row->getModel()->$relation()->getRelated();
@@ -167,7 +198,7 @@ class MassdbimportColumn {
         }
         
         return $relatedObjects; 
-        
+        */
     }
 
     /**
@@ -254,41 +285,6 @@ class MassdbimportColumn {
         return false;
     }
 
-    /**
-     * Checks a cell value for functions and executes
-     * function on value to return the new value
-     *
-     * @param String $value
-     *
-     * @return $value
-     */
-    protected function parseFlatValue($value)
-    {
-        if($parseParts = $this->getParseFunction($value)){
-            if($parseParts[0] == "slugify"){
-                $column = $parseParts[1];
-                $model = $this->row->getColumns();
-                $value = strtoupper(str_slug($model[$column], '_'));
-            }
-        }
 
-        if($value == ""){
-            $value = null;
-        }
-        
-        return $value;
-    }
-
-    /**
-     * Get the related record from a given column and value to search for
-     *
-     * @param Model $model Instance to search for related record 
-     * @param String $column 
-     * @param Mixed $value to look for
-     */
-    protected function getRelationRecord(Model $relation, $column, $value)
-    {
-        return $relation->where($column, $value)->first();
-    }
 
 }
