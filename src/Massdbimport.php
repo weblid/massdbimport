@@ -64,7 +64,8 @@ class Massdbimport
      * @access protected
      */
     protected $options = [
-        "ifDuplicate" => "QUIT" // UPDATE, SKIP, RENAME or QUIT
+        "ifDuplicate" => "QUIT", // UPDATE, SKIP, RENAME or QUIT
+        "ifRelationError" => "QUIT" // IGNORE, SKIP or QUIT
     ];
 
     public function __construct()
@@ -209,6 +210,18 @@ class Massdbimport
     public function ifDuplicate($action)
     {
         $this->options['ifDuplicate'] = $action;
+        return $this;
+    }
+
+    /** 
+     * Facade interface for the 'ifRelationError' option.
+     *
+     * @param String $action
+     * @access public
+     */
+    public function ifRelationError($action)
+    {
+        $this->options['ifRelationError'] = $action;
         return $this;
     }
 
