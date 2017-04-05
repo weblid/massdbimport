@@ -3,6 +3,8 @@
 namespace Weblid\Massdbimport;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\File;
 
 class MassdbimportColumn {
 
@@ -148,6 +150,16 @@ class MassdbimportColumn {
                 $column = $parseParts[1];
                 $model = $this->row->getColumns();
                 $value = strtoupper(str_slug($model[$column], '_'));
+            }
+            if($parseParts[0] == "imagify"){
+                $imageUrl = $parseParts[1];
+                $size = getimagesize($imageUrl);
+                $extension = image_type_to_extension($size[2]);
+                $filename = time() . $extension;
+                $file = Storage::put('/public/imported/'.$filename, file_get_contents($imageUrl), 'public');
+                $url = 'public/imported/'.$filename;
+            
+                $value = $url;
             }
         }
 

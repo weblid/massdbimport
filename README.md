@@ -48,6 +48,12 @@ slugify(column_name)
 ```
 This will create a slug (no spaces, upper case) string from the given column name.
 
+### Imagify 
+```php
+imagify(url)
+```
+This will import an image or file from a given publically accessible url. 
+
 
 ## Current Status
 
