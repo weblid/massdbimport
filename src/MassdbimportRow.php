@@ -238,6 +238,9 @@ class MassdbimportRow {
 
         if($cell->isRelationalKey())
         {
+            if(!$value['relation'])
+                return;
+            
             $relation = $value['relation'];
             $builder = $this->model->$relation()->getRelated();
             $exists = $builder->whereIn($value['column'], $value['data'])->count();
