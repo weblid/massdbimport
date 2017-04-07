@@ -286,6 +286,7 @@ class Massdbimport
      */
     private function doPostSaveRelations()
     {
+
         if(empty($this->getPostSaveRelations()))
             return;
 
@@ -301,7 +302,9 @@ class Massdbimport
                     $relation = $instruct['instructions']['relation'];
                     $relatedModel = $instruct['row']->$relation()->getRelated();
 
-                    $obj = $this->getRelationRecord($relatedModel, $instruct['instructions']['column'], $relationId);
+                    if($obj)
+                        $obj = $this->getRelationRecord($relatedModel, $instruct['instructions']['column'], $relationId);
+
                     $idsToAttach[] = $obj->id;
                 }
                 $instruct['row']->$relation()->attach($idsToAttach);
@@ -309,11 +312,10 @@ class Massdbimport
             else {
                 $relation = $instruct['instructions']['relation'];
                 $relatedModel = $instruct['row']->$relation()->getRelated();
-            
+                
                 $obj = $this->getRelationRecord($relatedModel, $instruct['instructions']['column'], $instruct['instructions']['data'][0]);
                 
                 if($obj){
-
                     $instruct['row']->$relation()->associate($obj);
                     $instruct['row']->save();
                 }

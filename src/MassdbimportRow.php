@@ -238,6 +238,22 @@ class MassdbimportRow {
 
         if($cell->isRelationalKey())
         {
+            $relation = $value['relation'];
+            $builder = $this->model->$relation()->getRelated();
+            $exists = $builder->whereIn($value['column'], $value['data'])->count();
+            
+            if(!$exists && $this->parent->getOption('ifRelationError') == "QUIT"){
+                dd("ABORTED: Couldn't find the relation " . $value['data'][0]);
+            }
+
+            if(!$exists && $this->parent->getOption('ifRelationError') == "IGNORE"){
+                return;
+            }
+
+            if(!$exists && $this->parent->getOption('ifRelationError') == "SKIP"){
+                $this->skipSave();
+            }
+
             $this->parent->pushPostSaveRelation($this->model, $value);
         }
         else 

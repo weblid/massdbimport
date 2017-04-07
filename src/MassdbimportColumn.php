@@ -187,8 +187,6 @@ class MassdbimportColumn {
 
         $values = array_filter($this->getValueAsArray());
    
-        $relatedObjects = [];
-
         if(empty($values) || !$values){
             return null;
         }
@@ -197,20 +195,7 @@ class MassdbimportColumn {
         $parts['data'] = $values;
    
         return $parts;
-        /*
-        foreach($values as $objectLink){
-            $relation = $parts['relation'];
-            $relatedModel = $this->row->getModel()->$relation()->getRelated();
-            $relatedObjects[] = $this->getRelationRecord($relatedModel, $parts['column'], $objectLink);
-        }
-
-        if($relationType == "BelongsToMany"){
-            $relatedIds = array_map(function($o) { return $o->id; }, $relatedObjects);
-            return $relatedIds;
-        }
         
-        return $relatedObjects; 
-        */
     }
 
     /**
