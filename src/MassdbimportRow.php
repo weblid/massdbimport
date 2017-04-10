@@ -3,6 +3,7 @@
 namespace Weblid\Massdbimport;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 
 class MassdbimportRow {
 
@@ -276,6 +277,14 @@ class MassdbimportRow {
         }
 
         $this->model->id ? $action = "UPDATE" : $action = "NEW";
+
+        if(!$this->model->created_by){
+            $this->model->created_by = Auth::id();
+        }
+
+        if(!$this->model->updated_by){
+            $this->model->updated_by = Auth::id();
+        }
 
         if($this->model->save()){
             $this->log()->newRecord($this->model, $action, $this->getPrevModel());

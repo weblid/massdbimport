@@ -302,10 +302,10 @@ class Massdbimport
                     $relation = $instruct['instructions']['relation'];
                     $relatedModel = $instruct['row']->$relation()->getRelated();
 
-                    if($obj)
-                        $obj = $this->getRelationRecord($relatedModel, $instruct['instructions']['column'], $relationId);
+                    $obj = $this->getRelationRecord($relatedModel, $instruct['instructions']['column'], $relationId);
 
-                    $idsToAttach[] = $obj->id;
+                    if($obj)
+                        $idsToAttach[] = $obj->id;
                 }
                 $instruct['row']->$relation()->attach($idsToAttach);
             }
