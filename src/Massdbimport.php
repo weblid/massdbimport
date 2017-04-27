@@ -307,6 +307,7 @@ class Massdbimport
                     if($obj)
                         $idsToAttach[] = $obj->id;
                 }
+                $instruct['row']->$relation()->detach();
                 $instruct['row']->$relation()->attach($idsToAttach);
             }
             else {
@@ -317,9 +318,15 @@ class Massdbimport
                 
                 if($obj){
                     $instruct['row']->$relation()->associate($obj);
-                    $instruct['row']->save();
+                    try {
+                        $instruct['row']->save();
+                    }
+                    catch(\Exception $e){
+                        dd($e);
+                    }
                 }
             }
+
         }
     }
 
